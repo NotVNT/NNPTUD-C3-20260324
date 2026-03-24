@@ -1,17 +1,34 @@
 const nodemailer = require("nodemailer");
+const path = require("path");
+require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
 
-const transporter = nodemailer.createTransport({
-    host: process.env.MAILTRAP_HOST || "sandbox.smtp.mailtrap.io",
-    port: Number(process.env.MAILTRAP_PORT || 2525),
-    secure: false, // Use true for port 465, false for port 587
-    auth: {
-        user: process.env.MAILTRAP_USER || process.env.MAILTRAP_USERNAME || "",
-        pass: process.env.MAILTRAP_PASS || process.env.MAILTRAP_PASSWORD || process.env.tokemailtrap || "",
-    },
-});
+function getMailtrapCredentials() {
+    const smtpUser = process.env.MAILTRAP_USER || process.env.MAILTRAP_USERNAME || "";
+    const smtpPass = process.env.MAILTRAP_PASS || process.env.MAILTRAP_PASSWORD || "";
+
+    if (!smtpUser || !smtpPass) {
+        throw new Error("Thiếu MAILTRAP_USER/MAILTRAP_PASS. Hãy cấu hình biến môi trường trước khi gửi mail.");
+    }
+
+    return { smtpUser, smtpPass };
+}
+
+function getTransporter() {
+    const { smtpUser, smtpPass } = getMailtrapCredentials();
+    return nodemailer.createTransport({
+        host: process.env.MAILTRAP_HOST || "sandbox.smtp.mailtrap.io",
+        port: Number(process.env.MAILTRAP_PORT || 2525),
+        secure: false, // Use true for port 465, false for port 587
+        auth: {
+            user: smtpUser,
+            pass: smtpPass,
+        },
+    });
+}
 
 module.exports = {
     sendMail: async function (to, url) {
+        const transporter = getTransporter();
         await transporter.sendMail({
             from: process.env.MAIL_FROM || 'user@123.com',
             to: to,
@@ -21,6 +38,7 @@ module.exports = {
         })
     },
     sendWelcomePasswordMail: async function (to, username, password) {
+        const transporter = getTransporter();
         await transporter.sendMail({
             from: process.env.MAIL_FROM || 'user@123.com',
             to: to,
